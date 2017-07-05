@@ -1,7 +1,7 @@
 package ecc.entities;
 
 import java.io.Serializable;
-import java.util.Vector;
+import java.util.*;
 
 /**
  * KeyRingECC is a class that has a structure of storing public and private keys

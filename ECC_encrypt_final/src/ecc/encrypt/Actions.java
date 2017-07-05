@@ -4,10 +4,12 @@ import static ecc.encrypt.ECC_MAIN.KEY_RING_PATH;
 import static ecc.entities.Curve.curve;
 import ecc.entities.KeyPairECC;
 import ecc.entities.KeyRingECC;
+import ecc.entities.Point;
 import ecc.entities.PrivateKeyECC;
 import ecc.entities.PublicKeyECC;
 import ecc.method.Decrypt;
 import ecc.method.Encrypt;
+import ecc.method.Singnature;
 import java.io.BufferedReader;
 import java.io.Console;
 import java.io.File;
@@ -24,8 +26,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- *Actions taken by user with user input 
- * 
+ * Actions taken by user with user input
+ *
  * @author user
  */
 public class Actions {
@@ -230,14 +232,16 @@ public class Actions {
             Logger.getLogger(Actions.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-/**
- * Encrypt a file with AES, the AES key was encrypt by ECC and attached in cipher and output cipher as file
- * 
- * @param privateKeyId
- * @param publicKeyId
- * @param inputFilePath
- * @param outputFilePath 
- */
+
+    /**
+     * Encrypt a file with AES, the AES key was encrypt by ECC and attached in
+     * cipher and output cipher as file
+     *
+     * @param privateKeyId
+     * @param publicKeyId
+     * @param inputFilePath
+     * @param outputFilePath
+     */
     public void Encrypt_File(String privateKeyId, String publicKeyId, String inputFilePath, String outputFilePath) {
 
         PrivateKeyECC privateKey = keyRing.getPrivateKey(privateKeyId);
@@ -288,10 +292,11 @@ public class Actions {
 
     /**
      * Read cipher file and decrypt with AES output file
+     *
      * @param privateKeyId
      * @param publicKeyId
      * @param inputFilePath
-     * @param outputFilePath 
+     * @param outputFilePath
      */
     public void Decrypt_File(String privateKeyId, String publicKeyId, String inputFilePath, String outputFilePath) {
 
@@ -344,4 +349,87 @@ public class Actions {
             Logger.getLogger(Actions.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
+
+    /**
+     * Sign digital signature for file
+     * 
+     * @param keyId
+     * @param filePath
+     * @param signPath 
+     */
+    public void Sign_digitalSignature(String keyId, String filePath, String signPath) {
+        // Get key
+        PrivateKeyECC privateKey = keyRing.getPrivateKey(keyId);
+
+        try {
+            if (privateKey == null) {
+                System.out.println("no such key(s) exists in key ring!");
+            } else if (!(new File(filePath)).exists()) {
+                System.out.println("file does not exist!");
+            } else {
+
+                // Input mask
+                Console console = System.console();
+                char[] pwdMask = console
+                        .readPassword("please input password for your private key: ");
+                String pwd = new String(pwdMask);
+
+                if (!privateKey.verifyPassward(pwd)) {
+                    System.out.println("invalid password!");
+                } else {
+
+                    System.out.println("password verified.");
+
+                    // sign signature
+                    Point sign = Singnature.Sign_Signature(keyId, privateKey, signPath);
+                    // write to file
+                    ObjectOutputStream oos = new ObjectOutputStream(
+                            new FileOutputStream(signPath));
+                    oos.writeObject(sign);
+                    oos.close();
+
+                    System.out
+                            .println("digital signature signed successfully.");
+
+                }
+            }
+        } catch (UnsupportedEncodingException ex) {
+            Logger.getLogger(Actions.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            Logger.getLogger(Actions.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    /**
+     * Verify digital signature from signed file
+     * 
+     * @param keyId
+     * @param filePath
+     * @param signPath 
+     */
+    public void Verify_digitalSignature(String keyId, String filePath, String signPath) {
+        // get key
+        PublicKeyECC publicKey = keyRing.getPublicKey(keyId);
+
+        try{
+        if (publicKey == null) {
+            System.out.println("no such key(s) exist in key ring");
+        } else {
+
+            // Read signature file
+            ObjectInputStream ois = new ObjectInputStream(
+                    new FileInputStream(signPath));
+            Point sign = (Point) ois.readObject();
+            ois.close();
+
+            Boolean verify = Singnature.Verify_Signature(filePath, sign, publicKey);
+            System.out.println("signature valid : " + verify);
+        }
+        } catch (IOException ex) {
+            Logger.getLogger(Actions.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ClassNotFoundException ex) {
+            Logger.getLogger(Actions.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
 }

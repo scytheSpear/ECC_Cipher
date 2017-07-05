@@ -3,8 +3,6 @@ package ecc.method;
 import ecc.entities.Point;
 import ecc.entities.Curve;
 import java.math.BigInteger;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Random;
 
 public class Function {
@@ -65,79 +63,50 @@ public class Function {
         return M;
     }
 
-    public Point signing(String M, BigInteger As) {
-        Function f = new Function();
+    public Point SignDigSingnature(BigInteger As, BigInteger z) {
 
         Point V = new Point(BigInteger.valueOf(0), BigInteger.valueOf(0));
         BigInteger v = BigInteger.valueOf(0);
         BigInteger x1 = BigInteger.valueOf(0);
         BigInteger y1 = BigInteger.valueOf(0);
 
-        do {
-            v = f.RandomR();
-            V = G.multiply(v);
-
-            //Hash message M to m
-            byte[] bytesOfMessage = M.getBytes();
-
-            MessageDigest md = null;
-            try {
-                md = MessageDigest.getInstance("MD5");
-            } catch (NoSuchAlgorithmException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
-            byte[] m = md.digest(bytesOfMessage);
-
-            //get bi as biginteger value of m
-            BigInteger bi = new BigInteger(m);
-            //BigInteger bi = BigInteger.valueOf(4);
-            System.out.println("m :" + bi);
-
-            x1 = V.x.mod(q);
-            y1 = ((bi.add(x1.multiply(As)).mod(q)).multiply(v.modPow(MinusOne, q))).mod(q);
-        } while (V.x == BigInteger.valueOf(0) || y1 == BigInteger.valueOf(0));
+        try {
+            do {
+                v = RandomR();
+                V = G.multiply(v);
+                x1 = V.x.mod(q);
+                y1 = ((z.add(x1.multiply(As)).mod(q)).multiply(v.modPow(MinusOne, q))).mod(q);
+            } while (V.x == BigInteger.valueOf(0) || y1 == BigInteger.valueOf(0));
+        } catch (Exception e) {
+        }
 
         Point S = new Point(x1, y1);
-
         return S;
     }
 
-    public boolean verifying(Point S, Point Ap, String M) {
+    public boolean verifyingDigSingnature(Point S, Point Ap, BigInteger signedBytes) {
         boolean ver = false;
 
-        if (S.x.compareTo(q) + S.y.compareTo(q) > -2 || S.x.compareTo(BigInteger.valueOf(0)) + S.y.compareTo(BigInteger.valueOf(0)) < 2) {
-            ver = false;
-        } else {
-            BigInteger w = S.y.modPow(MinusOne, q);
-            byte[] bytesOfMessage = M.getBytes();
-
-            MessageDigest md = null;
-            try {
-                md = MessageDigest.getInstance("MD5");
-            } catch (NoSuchAlgorithmException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
-
-            byte[] m = md.digest(bytesOfMessage);
-            //get bi as biginteger value of m
-            BigInteger bi = new BigInteger(m);
-
-            System.out.println("m :" + bi);
-
-            BigInteger u1 = bi.multiply(w).mod(q);
-            BigInteger u2 = S.x.multiply(w).mod(q);
-
-            Point U1 = G.multiply(u1);
-            Point U2 = Ap.multiply(u2);
-
-            Point U = U1.add(U2);
-            if (U.x.mod(q).equals(S.x)) {
-                ver = true;
-            } else {
+        try {
+            if (S.x.compareTo(q) + S.y.compareTo(q) > -2 || S.x.compareTo(BigInteger.valueOf(0)) + S.y.compareTo(BigInteger.valueOf(0)) < 2) {
                 ver = false;
+            } else {
+                BigInteger w = S.y.modPow(MinusOne, q);
+
+                BigInteger u1 = signedBytes.multiply(w).mod(q);
+                BigInteger u2 = S.x.multiply(w).mod(q);
+
+                Point U1 = G.multiply(u1);
+                Point U2 = Ap.multiply(u2);
+
+                Point U = U1.add(U2);
+                if (U.x.mod(q).equals(S.x)) {
+                    ver = true;
+                } else {
+                    ver = false;
+                }
             }
+        } catch (Exception e) {
         }
 
         return ver;
